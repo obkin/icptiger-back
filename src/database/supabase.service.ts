@@ -19,15 +19,23 @@ export class SupabaseService implements OnModuleInit {
   constructor(private configService: ConfigService) {}
 
   onModuleInit() {
-    const supabaseUrl = this.configService.get<string>('supabase.url');
-    const supabaseKey = this.configService.get<string>('supabase.key');
+    try {
+      const supabaseUrl = this.configService.get<string>('supabase.url');
+      const supabaseKey = this.configService.get<string>('supabase.key');
 
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Supabase configuration is missing');
+      if (!supabaseUrl || !supabaseKey) {
+        this.logger.error(
+          'Supabase configuration is missing. Please check your .env file.',
+        );
+        this.logger.error('Required variables: SUPABASE_URL and SUPABASE_KEY');
+        return;
+      }
+
+      this.supabase = createClient(supabaseUrl, supabaseKey);
+      this.logger.log('Supabase client initialized');
+    } catch (error) {
+      this.logger.error('Failed to initialize Supabase client:', error);
     }
-
-    this.supabase = createClient(supabaseUrl, supabaseKey);
-    this.logger.log('Supabase client initialized');
   }
 
   getClient(): SupabaseClient {
@@ -36,6 +44,11 @@ export class SupabaseService implements OnModuleInit {
 
   async testConnection(): Promise<boolean> {
     try {
+      if (!this.supabase) {
+        this.logger.error('Supabase client is not initialized');
+        return false;
+      }
+
       const { data, error } = await this.supabase
         .from('linkedin_campaigns')
         .select('count', { count: 'exact', head: true });
@@ -55,12 +68,10 @@ export class SupabaseService implements OnModuleInit {
 
   async logActivity(activityData: ActivityLogData): Promise<void> {
     try {
-      const { error } = await this.supabase
-        .from('activity_logs')
-        .insert({
-          ...activityData,
-          created_at: new Date().toISOString(),
-        });
+      const { error } = await this.supabase.from('activity_logs').insert({
+        ...activityData,
+        created_at: new Date().toISOString(),
+      });
 
       if (error) {
         this.logger.error('Failed to log activity:', error);
@@ -93,7 +104,10 @@ export class SupabaseService implements OnModuleInit {
       .single();
 
     if (error) {
-      this.logger.error(`Failed to get LinkedIn account for user ${userId}:`, error);
+      this.logger.error(
+        `Failed to get LinkedIn account for user ${userId}:`,
+        error,
+      );
       throw error;
     }
 
@@ -114,7 +128,10 @@ export class SupabaseService implements OnModuleInit {
     const { data, error } = await query;
 
     if (error) {
-      this.logger.error(`Failed to get LinkedIn connections for campaign ${campaignId}:`, error);
+      this.logger.error(
+        `Failed to get LinkedIn connections for campaign ${campaignId}:`,
+        error,
+      );
       throw error;
     }
 
@@ -145,10 +162,13 @@ export class SupabaseService implements OnModuleInit {
       .single();
 
     if (error) {
-      this.logger.error(`Failed to update LinkedIn connection ${connectionId}:`, error);
+      this.logger.error(
+        `Failed to update LinkedIn connection ${connectionId}:`,
+        error,
+      );
       throw error;
     }
 
     return data;
   }
-} 
+}

@@ -20,13 +20,15 @@ export interface AppConfig {
     };
   };
 }
-
 export default (): AppConfig => {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL || '';
+  const supabaseKey = process.env.SUPABASE_KEY || '';
 
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing required environment variables: SUPABASE_URL and SUPABASE_KEY');
+    console.warn(
+      'Missing required environment variables: SUPABASE_URL and SUPABASE_KEY',
+    );
+    console.warn('Please create a .env file with these variables');
   }
 
   return {
@@ -51,4 +53,4 @@ export default (): AppConfig => {
       },
     },
   };
-}; 
+};
